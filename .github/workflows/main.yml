@@ -1,4 +1,4 @@
-name: Compile SM64 DS Port
+name: Compile SM64 DS Port Manual
 
 on:
   workflow_dispatch:
@@ -11,26 +11,30 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Build Docker Image
+      run: docker build -t sm64ds-compiler .
 
-    - name: Create local output directory
-      run: mkdir -p out
-
-    - name: Compile with Docker Volume
+    - name: Create Container and Extract Rom
       run: |
-        docker build -t sm64ds-compiler .
-        docker run --rm -v ${{ github.workspace }}/out:/app/out -v ${{ github.workspace }}/out:/workspace/out sm64ds-compiler || true
+        # Creamos el contenedor sin ejecutarlo para inspeccionarlo
+        docker create --name game_container sm64ds-compiler
         
-    - name: Check inside out folder
-      run: |
-        ls -R out/ || true
-        find . -name "*.nds" || true
+        # Le ordenamos a GitHub crear una carpeta afuera
+        mkdir -p extracted_game
+        
+        # Buscamos y extraemos CUALQUIER archivo .nds del contenedor a la mala
+        docker cp game_container:/workspace/build/ . || true
+        docker cp game_container:/app/build/ . || true
+        docker cp game_container:/workspace/ . || true
+        docker cp game_container:/app/ . || true
+        
+        # Comando de rastreo profundo
+        find . -name "*.nds" -exec cp {} extracted_game/ \; || true
 
     - name: Upload NDS Rom Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: sm64-ds-port
+        name: sm64-ds-port-ready
         path: |
-          out/
+          extracted_game/
           **/*.nds
