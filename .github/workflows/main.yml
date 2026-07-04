@@ -26,4 +26,6 @@ jobs:
         name: sm64-ds-port
         path: |
           **/*.nds
-          build/
+          *.nds
+          **/*.bin
+
