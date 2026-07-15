@@ -1,4 +1,4 @@
-name: Compile SM64 DS Port Manual
+name: Compile SM64 DS Port
 
 on:
   workflow_dispatch:
@@ -8,33 +8,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Build Docker Image
-      run: docker build -t sm64ds-compiler .
+      - name: Install Dependencies and DevkitPro
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git libpng-dev tools-common
+          # Descarga e instala devkitARM de forma automatizada
+          wget https://github.com
+          sudo apt-get install ./devkitpro-pacman.deb
+          sudo dkp-pacman -Syy --noconfirm
+          sudo dkp-pacman -S nds-dev --noconfirm
 
-    - name: Create Container and Extract Rom
-      run: |
-        # Creamos el contenedor sin ejecutarlo para inspeccionarlo
-        docker create --name game_container sm64ds-compiler
-        
-        # Le ordenamos a GitHub crear una carpeta afuera
-        mkdir -p extracted_game
-        
-        # Buscamos y extraemos CUALQUIER archivo .nds del contenedor a la mala
-        docker cp game_container:/workspace/build/ . || true
-        docker cp game_container:/app/build/ . || true
-        docker cp game_container:/workspace/ . || true
-        docker cp game_container:/app/ . || true
-        
-        # Comando de rastreo profundo
-        find . -name "*.nds" -exec cp {} extracted_game/ \; || true
+      - name: Set Environment Variables
+        run: |
+          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
 
-    - name: Upload NDS Rom Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: sm64-ds-port-ready
-        path: |
-          extracted_game/
-          **/*.nds
+      - name: Compile ROM
+        run: |
+          # Compila el proyecto usando las herramientas nativas
+          make
+
+      - name: Upload NDS Rom Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sm64-ds-port
+          path: |
+            *.nds
+            build/*.nds
